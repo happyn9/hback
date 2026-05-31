@@ -44,7 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# =================== ROUTERS ===================
+# =================== ROUTERS ================----
 app.include_router(auth.router, prefix="/auth")
 app.include_router(subscriptions.router)
 app.include_router(premium.router)
