@@ -6,7 +6,7 @@ from sendgrid.helpers.mail import Mail
 # -------------------------------
 # Helper function to send email
 # -------------------------------
-def send_email(to_email, subject, html_content, from_email="habakkuksarl@gmail.com"):
+def send_email(to_email, subject, html_content, from_email="hlearningsarl@gmail.com"):
     """
     Send an email using SendGrid
     """
