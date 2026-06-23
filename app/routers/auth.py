@@ -114,6 +114,33 @@ def verify_otp(data: VerifyOTPSchema, response: Response, db: Session = Depends(
     )
 
     return {"message": "Authenticated"}
+
+# ================= RESEND OTP =================
+@router.post("/resend-otp")
+def resend_otp(data: dict, db: Session = Depends(get_db)):
+    email = data.get("email")
+    if not email:
+        raise HTTPException(400, "Email required")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    otp_code = str(random.randint(100000, 999999))
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    user.otp_code = otp_code
+    user.otp_expires_at = otp_expires_at
+    db.commit()
+
+    try:
+        send_email(email, "Your new OTP Code", otp_email(otp_code))
+    except Exception as e:
+        print(f"[EMAIL] Failed: {e}")
+
+    return {"message": "New OTP sent!"}
+
+
 # ================= LOGIN =================
 # ================= LOGIN =================
 @router.post("/login")

@@ -36,7 +36,7 @@ def welcome_email(name):
         <body style="font-family: Arial, sans-serif; color: #2B0A5B;">
             <h2>Welcome to H-Learning, {name}!</h2>
             <p>Thank you for signing up. Start exploring our premium courses today!</p>
-            <p><a href="https://h-learning.com/login" style="padding: 10px 20px; background-color: #2B0A5B; color: white; text-decoration: none; border-radius: 8px;">Login Now</a></p>
+            <p><a href="https://h-learning-wine.vercel.app/auth" style="padding: 10px 20px; background-color: #2B0A5B; color: white; text-decoration: none; border-radius: 8px;">Login Now</a></p>
         </body>
     </html>
     """
@@ -48,7 +48,7 @@ def login_alert_email(name, ip_address):
             <h2>Login Alert</h2>
             <p>Hello {name}, we noticed a login to your account from IP: {ip_address}.</p>
             <p>If this was you, no action is needed. Otherwise, please secure your account immediately.</p>
-            <p><a href="https://h-learning.com/security" style="padding: 10px 20px; background-color: #2B0A5B; color: white; text-decoration: none; border-radius: 8px;">Secure Account</a></p>
+            <p><a href="https://h-learning-wine.vercel.app/security" style="padding: 10px 20px; background-color: #2B0A5B; color: white; text-decoration: none; border-radius: 8px;">Secure Account</a></p>
         </body>
     </html>
     """
@@ -72,7 +72,7 @@ def subscription_email(course_name):
             <h2>Subscription Confirmed!</h2>
             <p>Thank you for subscribing to <strong>{course_name}</strong>.</p>
             <p>Start learning now and unlock your full potential!</p>
-            <p><a href="https://h-learning.com/courses/{course_name.replace(' ', '-').lower()}" style="padding: 10px 20px; background-color: #2B0A5B; color: white; text-decoration: none; border-radius: 8px;">Go to Course</a></p>
+            <p><a href="https://h-learning-wine.vercel.app/{course_name.replace(' ', '-').lower()}" style="padding: 10px 20px; background-color: #2B0A5B; color: white; text-decoration: none; border-radius: 8px;">Go to Course</a></p>
         </body>
     </html>
     """
