@@ -13,3 +13,4 @@ python-multipart
 openai
 google-auth
 requests
+sendgrid
