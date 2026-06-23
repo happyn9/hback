@@ -8,13 +8,13 @@ from fastapi import (
     File,
     Request
 )
-
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 import shutil
 import os
 from uuid import uuid4
 import secrets
-
+import random
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
@@ -51,103 +51,88 @@ UPLOAD_DIR = "uploads/users"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
-# ================= REGISTER =================
 @router.post("/register")
 def register(data: RegisterSchema, db: Session = Depends(get_db)):
 
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(400, "Email already exists")
 
+    # Génère OTP
+    otp_code = str(random.randint(100000, 999999))
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+
     user = User(
         name=data.name,
         email=data.email,
-        password_hash=hash_password(data.password)
+        password_hash=hash_password(data.password),
+        otp_code=otp_code,
+        otp_expires_at=otp_expires_at
     )
-
     db.add(user)
     db.commit()
 
-    send_email(
-        to_email=data.email,
-        subject="Welcome to H-Learning!",
-        html_content=welcome_email(data.name)
-    )
+    # Envoi email non-bloquant
+    try:
+        send_email(data.email, "Welcome to H-Learning!", welcome_email(data.name))
+        send_email(data.email, "Your OTP Code", otp_email(otp_code))
+    except Exception as e:
+        print(f"[EMAIL] Failed: {e}")
 
-    send_email(
-        to_email=data.email,
-        subject="Your OTP Code",
-        html_content=otp_email(FAKE_OTP)
-    )
-
-    return {"message": "OTP sent. Welcome email delivered!"}
+    return {"message": "OTP sent to your email!"}
 
 
 # ================= VERIFY OTP =================
 @router.post("/verify-otp")
-def verify_otp(
-    data: VerifyOTPSchema,
-    response: Response,
-    db: Session = Depends(get_db)
-):
-
-    if data.otp != FAKE_OTP:
-        raise HTTPException(400, "Invalid OTP")
+def verify_otp(data: VerifyOTPSchema, response: Response, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == data.email).first()
-
     if not user:
         raise HTTPException(404, "User not found")
 
-    token = create_access_token(
-        {"user_id": user.id},
-        data.remember_me
-    )
+    if user.otp_code != data.otp:
+        raise HTTPException(400, "Invalid OTP")
+
+    if user.otp_expires_at and datetime.now(timezone.utc) > user.otp_expires_at:
+        raise HTTPException(400, "OTP expired")
+
+    # Marque email vérifié et efface l'OTP
+    user.email_verified = True
+    user.otp_code = None
+    user.otp_expires_at = None
+    db.commit()
+
+    token = create_access_token({"user_id": user.id}, data.remember_me)
 
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,
+        samesite="none",
+        secure=True,
         path="/"
     )
 
     return {"message": "Authenticated"}
-
-
 # ================= LOGIN =================
 @router.post("/login")
-def login(
-    data: LoginSchema,
-    response: Response,
-    db: Session = Depends(get_db)
-):
+def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == data.email).first()
-
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=404, detail="Wrong Email or password")
 
-    token = create_access_token(
-        {"user_id": user.id},
-        data.remember_me
-    )
+    token = create_access_token({"user_id": user.id}, data.remember_me)
 
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,
+        samesite="none",   # ← idem
+        secure=True,       # ← idem
         path="/"
     )
 
-    return {
-        "message": "Logged in",
-        "role": user.role,
-        "user_id": user.id
-    }
-
+    return {"message": "Logged in", "role": user.role, "user_id": user.id}
 
 # ================= LOGOUT =================
 @router.post("/logout")

@@ -12,7 +12,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     old_password_hash = Column(String, nullable=True)
 
-    role = Column(String, default="student")  # student | instructor | admin
+    role = Column(String, default="student")
     is_admin = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     email_verified = Column(Boolean, default=False)
@@ -24,6 +24,11 @@ class User(Base):
     onboarding = Column(JSON, default=lambda: {})
     academic = Column(JSON, default=lambda: {})
     onboarding_completed = Column(Boolean, default=False)
+
+    # ← NOUVEAU
+    otp_code = Column(String, nullable=True)
+    otp_expires_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relations
     subscriptions = relationship("UserSubscription", back_populates="user")
     notes = relationship("UserNote", back_populates="user", cascade="all, delete-orphan")

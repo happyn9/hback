@@ -19,6 +19,7 @@ logger = logging.getLogger("payments")
 
 FLW_SECRET_KEY  = settings.FLUTTERWAVE_SECRET_KEY
 FLW_WEBHOOK_HASH = settings.FLUTTERWAVE_WEBHOOK_HASH
+FRONTEND_URL=settings.FRONTEND_URL
 BACKEND_URL     = settings.BACKEND_URL
 
 PHONE_REGEX = re.compile(r"^\d{9,10}$")
