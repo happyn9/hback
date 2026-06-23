@@ -40,6 +40,7 @@ app.add_middleware(
     "http://localhost:5174",
     "http://192.168.0.104:5173",
     "https://feel-landed-legroom.ngrok-free.dev",
+    "https://h-learning-wine.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
