@@ -43,7 +43,6 @@ from app.utils.send_email import (
 
 router = APIRouter(tags=["Auth"])
 
-FAKE_OTP = "123456"
 GOOGLE_CLIENT_ID = "974675121498-ic32r1j1ooto7eq0bnohkh8dk4vfrsgo.apps.googleusercontent.com"
 
 UPLOAD_DIR = "uploads/users"
@@ -60,6 +59,8 @@ def register(data: RegisterSchema, db: Session = Depends(get_db)):
     # Génère OTP
     otp_code = str(random.randint(100000, 999999))
     otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    print(otp_code)
 
     user = User(
         name=data.name,
