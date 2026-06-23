@@ -8,6 +8,7 @@ from datetime import date, timedelta
 
 from app.core.database import Base, engine, SessionLocal
 from app.seeds.seed_data import seed_database
+
 from app.routers import (
     auth,
     programs,
@@ -21,9 +22,9 @@ from app.routers import (
     admin,
     ai,
     workspace,
-    upload
+    upload,
+    payment       
 )
-
 
 
 
@@ -35,9 +36,10 @@ app = FastAPI(title="h-learning API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://192.168.0.104:5173",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://192.168.0.104:5173",
+    "https://feel-landed-legroom.ngrok-free.dev",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -58,6 +60,7 @@ app.include_router(ai.router)
 app.include_router(programs.router, prefix="/programs")
 app.include_router(workspace.router)
 app.include_router(upload.router)
+app.include_router(payment.router)   
 
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -138,7 +141,7 @@ def read_root():
 
 
 
-"""from app.core.database import SessionLocal
+from app.core.database import SessionLocal
 from app.models import Subscription, Course
 
 def seed_subscriptions(db=None):
@@ -193,4 +196,4 @@ def seed_subscriptions(db=None):
 
 # Exécution
 seed_subscriptions()
-"""
+

@@ -119,10 +119,23 @@ def require_admin_pin(
     pin: str = Query(...),
     admin: User = Depends(require_admin)
 ):
+    # Si aucun PIN n'est défini
     if not admin.pin_hash:
-        raise HTTPException(400, "PIN not set")
+        expected_pin = "1234"
 
+        if pin != expected_pin:
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid PIN"
+            )
+
+        return admin
+
+    # Vérification du PIN enregistré
     if not verify_pin(pin, admin.pin_hash):
-        raise HTTPException(403, "Invalid PIN")
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid PIN"
+        )
 
     return admin

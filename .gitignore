@@ -1,1 +1,21 @@
+# à la racine du projet
+cat > .gitignore << 'EOF'
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# DB locale (on utilisera Neon en prod)
+hlearning.db
+
+# Uploads locaux (à gérer avec un storage cloud plus tard)
+uploads/
+
+# Env
 .env
+*.env
+
+# Alembic cache
+alembic/__pycache__/
+EOF
