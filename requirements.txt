@@ -14,3 +14,4 @@ openai
 google-auth
 requests
 sendgrid
+argon2_cffi
