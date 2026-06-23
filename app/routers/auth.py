@@ -50,17 +50,14 @@ UPLOAD_DIR = "uploads/users"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
+# ================= REGISTER =================
 @router.post("/register")
 def register(data: RegisterSchema, db: Session = Depends(get_db)):
-
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(400, "Email already exists")
 
-    # Génère OTP
     otp_code = str(random.randint(100000, 999999))
     otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
-
-    print(otp_code)
 
     user = User(
         name=data.name,
@@ -70,9 +67,12 @@ def register(data: RegisterSchema, db: Session = Depends(get_db)):
         otp_expires_at=otp_expires_at
     )
     db.add(user)
+    db.flush()    # ← persist sans fermer la transaction
     db.commit()
+    db.refresh(user)  # ← recharge depuis la DB
 
-    # Envoi email non-bloquant
+    print(f"[OTP] Stored code: {user.otp_code}")  # vérifie en logs
+
     try:
         send_email(data.email, "Welcome to H-Learning!", welcome_email(data.name))
         send_email(data.email, "Your OTP Code", otp_email(otp_code))
@@ -82,38 +82,31 @@ def register(data: RegisterSchema, db: Session = Depends(get_db)):
     return {"message": "OTP sent to your email!"}
 
 
-# ================= VERIFY OTP =================
-@router.post("/verify-otp")
-def verify_otp(data: VerifyOTPSchema, response: Response, db: Session = Depends(get_db)):
-
+# ================= LOGIN =================
+@router.post("/login")
+def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
-    if not user:
-        raise HTTPException(404, "User not found")
+    if not user or not verify_password(data.password, user.password_hash):
+        raise HTTPException(status_code=404, detail="Wrong Email or password")
 
-    if user.otp_code != data.otp:
-        raise HTTPException(400, "Invalid OTP")
+    otp_code = str(random.randint(100000, 999999))
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
 
-    if user.otp_expires_at and datetime.now(timezone.utc) > user.otp_expires_at:
-        raise HTTPException(400, "OTP expired")
-
-    # Marque email vérifié et efface l'OTP
-    user.email_verified = True
-    user.otp_code = None
-    user.otp_expires_at = None
+    user.otp_code = otp_code
+    user.otp_expires_at = otp_expires_at
+    db.flush()    # ← flush avant commit
     db.commit()
+    db.refresh(user)
 
-    token = create_access_token({"user_id": user.id}, data.remember_me)
+    print(f"[OTP] Stored code for {user.email}: {user.otp_code}")
 
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        samesite="none",
-        secure=True,
-        path="/"
-    )
+    try:
+        send_email(user.email, "Your OTP Code", otp_email(otp_code))
+    except Exception as e:
+        print(f"[EMAIL] Failed: {e}")
 
-    return {"message": "Authenticated"}
+    return {"message": "OTP sent to your email!"}
+
 
 # ================= RESEND OTP =================
 @router.post("/resend-otp")
@@ -131,7 +124,11 @@ def resend_otp(data: dict, db: Session = Depends(get_db)):
 
     user.otp_code = otp_code
     user.otp_expires_at = otp_expires_at
+    db.flush()
     db.commit()
+    db.refresh(user)
+
+    print(f"[OTP] Resent code for {email}: {user.otp_code}")
 
     try:
         send_email(email, "Your new OTP Code", otp_email(otp_code))
@@ -141,30 +138,41 @@ def resend_otp(data: dict, db: Session = Depends(get_db)):
     return {"message": "New OTP sent!"}
 
 
-# ================= LOGIN =================
-# ================= LOGIN =================
-@router.post("/login")
-def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
-
+# ================= VERIFY OTP =================
+@router.post("/verify-otp")
+def verify_otp(data: VerifyOTPSchema, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
-    if not user or not verify_password(data.password, user.password_hash):
-        raise HTTPException(status_code=404, detail="Wrong Email or password")
+    if not user:
+        raise HTTPException(404, "User not found")
 
-    # Génère un nouvel OTP
-    otp_code = str(random.randint(100000, 999999))
-    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    print(f"[OTP] Comparing: received={data.otp} stored={user.otp_code}")
 
-    user.otp_code = otp_code
-    user.otp_expires_at = otp_expires_at
+    if not user.otp_code:
+        raise HTTPException(400, "No OTP found, request a new one")
+
+    if user.otp_code != data.otp:
+        raise HTTPException(400, "Invalid OTP")
+
+    if user.otp_expires_at and datetime.now(timezone.utc) > user.otp_expires_at:
+        raise HTTPException(400, "OTP expired")
+
+    user.email_verified = True
+    user.otp_code = None
+    user.otp_expires_at = None
     db.commit()
 
-    # Envoi email non-bloquant
-    try:
-        send_email(user.email, "Your OTP Code", otp_email(otp_code))
-    except Exception as e:
-        print(f"[EMAIL] Failed: {e}")
+    token = create_access_token({"user_id": user.id}, data.remember_me)
 
-    return {"message": "OTP sent to your email!"}
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        samesite="none",
+        secure=True,
+        path="/"
+    )
+
+    return {"message": "Authenticated"}
 
 # ================= LOGOUT =================
 @router.post("/logout")
