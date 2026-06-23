@@ -115,6 +115,7 @@ def verify_otp(data: VerifyOTPSchema, response: Response, db: Session = Depends(
 
     return {"message": "Authenticated"}
 # ================= LOGIN =================
+# ================= LOGIN =================
 @router.post("/login")
 def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
 
@@ -122,18 +123,21 @@ def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=404, detail="Wrong Email or password")
 
-    token = create_access_token({"user_id": user.id}, data.remember_me)
+    # Génère un nouvel OTP
+    otp_code = str(random.randint(100000, 999999))
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
 
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        samesite="none",   # ← idem
-        secure=True,       # ← idem
-        path="/"
-    )
+    user.otp_code = otp_code
+    user.otp_expires_at = otp_expires_at
+    db.commit()
 
-    return {"message": "Logged in", "role": user.role, "user_id": user.id}
+    # Envoi email non-bloquant
+    try:
+        send_email(user.email, "Your OTP Code", otp_email(otp_code))
+    except Exception as e:
+        print(f"[EMAIL] Failed: {e}")
+
+    return {"message": "OTP sent to your email!"}
 
 # ================= LOGOUT =================
 @router.post("/logout")
