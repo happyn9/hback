@@ -162,12 +162,12 @@ def verify_otp(data: VerifyOTPSchema, response: Response, db: Session = Depends(
     token = create_access_token({"user_id": user.id}, data.remember_me)
 
     response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        samesite="none",
-        secure=True,
-        path="/"
+    key="access_token",
+    value=token,
+    httponly=True,
+    samesite="none",  # ✅ cross-origin autorisé
+    secure=True,      # ✅ obligatoire avec samesite=none
+    path="/"
     )
 
     return {"message": "Authenticated"}
@@ -292,12 +292,12 @@ def google_login(data: dict, response: Response, db: Session = Depends(get_db)):
     token = create_access_token({"user_id": user.id}, False)
 
     response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        secure=False,
-        path="/"
+    key="access_token",
+    value=token,
+    httponly=True,
+    samesite="none",  
+    secure=True,      
+    path="/"
     )
 
     return {"message": "Google login success"}

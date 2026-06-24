@@ -27,27 +27,30 @@ from app.routers import (
 )
 
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
+app = FastAPI(title="Don't get suprised !!!")
 
-# =================== APP ===================
-app = FastAPI(title="h-learning API")
+# Middleware COOP pour que Google OAuth popup puisse communiquer
+class COOPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        return response
 
-# =================== MIDDLEWARE ===================
+app.add_middleware(COOPMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://192.168.0.104:5173",
-        "https://feel-landed-legroom.ngrok-free.dev",
-        "https://h-learning-wine.vercel.app",
-        "https://hback-3.onrender.com",
-    ],
+    allow_origins=[""
+    "https://h-learning-wine.vercel.app",
+    "https://hback-3.onrender.com"
+    ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # =================== ROUTERS ================----
 app.include_router(auth.router, prefix="/auth")
 app.include_router(subscriptions.router)
