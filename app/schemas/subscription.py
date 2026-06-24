@@ -10,8 +10,7 @@ class SubscriptionOut(BaseModel):
     start_date: date
     end_date: date
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}  
 
 class SubscribeCoursesIn(BaseModel):
     course_ids: List[int]

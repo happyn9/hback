@@ -16,5 +16,4 @@ class LessonCreate(LessonBase):
 class LessonOut(LessonBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}  

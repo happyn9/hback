@@ -87,8 +87,7 @@ class WorkspaceMemberDetail(BaseModel):
     email: str
     avatar: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}  
 
 
 # ---- Liste membres ----

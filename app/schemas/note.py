@@ -7,5 +7,4 @@ class NoteCreate(BaseModel):
 class NoteOut(NoteCreate):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}  

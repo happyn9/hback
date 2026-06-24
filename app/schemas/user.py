@@ -22,10 +22,9 @@ class UserOut(BaseModel):
     photo_url: Optional[str] = None
     role: str
     onboarding_completed: bool
-
-    class Config:
-        orm_mode = True
-
+ 
+    model_config = {"from_attributes": True}  
+ 
 
 class VerifyOTPSchema(BaseModel):
     email: EmailStr
