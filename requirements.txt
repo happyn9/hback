@@ -16,3 +16,4 @@ requests
 sendgrid
 argon2_cffi
 psycopg2
+alembic
