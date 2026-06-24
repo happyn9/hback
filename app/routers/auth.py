@@ -89,23 +89,21 @@ def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=404, detail="Wrong Email or password")
 
-    otp_code = str(random.randint(100000, 999999))
-    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
-
-    user.otp_code = otp_code
-    user.otp_expires_at = otp_expires_at
-    db.flush()    # ← flush avant commit
-    db.commit()
-    db.refresh(user)
-
-    print(f"[OTP] Stored code for {user.email}: {user.otp_code}")
-
-    try:
-        send_email(user.email, "Your OTP Code", otp_email(otp_code))
-    except Exception as e:
-        print(f"[EMAIL] Failed: {e}")
+   
+    now = datetime.now(timezone.utc)
+    if not (user.otp_code and user.otp_expires_at and user.otp_expires_at > now):
+        otp_code = str(random.randint(100000, 999999))
+        user.otp_code = otp_code
+        user.otp_expires_at = now + timedelta(minutes=5)
+        db.commit()
+        db.refresh(user)
+        try:
+            send_email(user.email, "Your OTP Code", otp_email(otp_code))
+        except Exception as e:
+            print(f"[EMAIL] Failed: {e}")
 
     return {"message": "OTP sent to your email!"}
+
 
 
 # ================= RESEND OTP =================
