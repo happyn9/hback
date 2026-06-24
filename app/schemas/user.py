@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
 from typing import Optional
+
 
 class RegisterSchema(BaseModel):
     name: str
@@ -7,10 +8,12 @@ class RegisterSchema(BaseModel):
     password: str
     photo_url: Optional[str] = None
 
+
 class LoginSchema(BaseModel):
     email: EmailStr
     password: str
     remember_me: bool = False
+
 
 class UserOut(BaseModel):
     id: int
@@ -18,17 +21,18 @@ class UserOut(BaseModel):
     email: EmailStr
     photo_url: Optional[str] = None
     role: str
-    onboarding_completed: bool 
+    onboarding_completed: bool
 
     class Config:
         orm_mode = True
+
 
 class VerifyOTPSchema(BaseModel):
     email: EmailStr
     otp: str
     remember_me: bool = False
 
-    
+
 class ChangePasswordSchema(BaseModel):
     old_password: str
     new_password: str

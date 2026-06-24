@@ -50,6 +50,7 @@ UPLOAD_DIR = "uploads/users"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
+
 # ================= REGISTER =================
 @router.post("/register")
 def register(data: RegisterSchema, db: Session = Depends(get_db)):
@@ -64,14 +65,17 @@ def register(data: RegisterSchema, db: Session = Depends(get_db)):
         email=data.email,
         password_hash=hash_password(data.password),
         otp_code=otp_code,
-        otp_expires_at=otp_expires_at
+        otp_expires_at=otp_expires_at,
+        email_verified=False,
+        onboarding_completed=False,
+        role="student",
     )
     db.add(user)
-    db.flush()    # ← persist sans fermer la transaction
+    db.flush()
     db.commit()
-    db.refresh(user)  # ← recharge depuis la DB
+    db.refresh(user)
 
-    print(f"[OTP] Stored code: {user.otp_code}")  # vérifie en logs
+    print(f"[OTP] Stored code: {user.otp_code}")
 
     try:
         send_email(data.email, "Welcome to H-Learning!", welcome_email(data.name))
@@ -89,7 +93,6 @@ def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=404, detail="Wrong Email or password")
 
-   
     now = datetime.now(timezone.utc)
     if not (user.otp_code and user.otp_expires_at and user.otp_expires_at > now):
         otp_code = str(random.randint(100000, 999999))
@@ -103,7 +106,6 @@ def login(data: LoginSchema, response: Response, db: Session = Depends(get_db)):
             print(f"[EMAIL] Failed: {e}")
 
     return {"message": "OTP sent to your email!"}
-
 
 
 # ================= RESEND OTP =================
@@ -162,15 +164,16 @@ def verify_otp(data: VerifyOTPSchema, response: Response, db: Session = Depends(
     token = create_access_token({"user_id": user.id}, data.remember_me)
 
     response.set_cookie(
-    key="access_token",
-    value=token,
-    httponly=True,
-    samesite="none",  # ✅ cross-origin autorisé
-    secure=True,      # ✅ obligatoire avec samesite=none
-    path="/"
+        key="access_token",
+        value=token,
+        httponly=True,
+        samesite="none",
+        secure=True,
+        path="/"
     )
 
     return {"message": "Authenticated"}
+
 
 # ================= LOGOUT =================
 @router.post("/logout")
@@ -192,7 +195,6 @@ def change_password(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-
     if not verify_password(data.old_password, user.password_hash):
         raise HTTPException(status_code=400, detail="Old password is incorrect")
 
@@ -216,7 +218,6 @@ def update_profile(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-
     existing_user = db.query(User).filter(
         User.email == email,
         User.id != user.id
@@ -264,18 +265,21 @@ def update_profile(
 # ================= GOOGLE LOGIN =================
 @router.post("/google")
 def google_login(data: dict, response: Response, db: Session = Depends(get_db)):
-
     try:
         idinfo = id_token.verify_oauth2_token(
             data["token"],
             requests.Request(),
             GOOGLE_CLIENT_ID
         )
-    except Exception:
+    except Exception as e:
+        print(f"[GOOGLE] Token verification failed: {e}")
         raise HTTPException(400, "Invalid Google token")
 
-    email = idinfo["email"]
-    name = idinfo.get("name")
+    email = idinfo.get("email")
+    name = idinfo.get("name", "User")
+
+    if not email:
+        raise HTTPException(400, "Google account has no email")
 
     user = db.query(User).filter(User.email == email).first()
 
@@ -283,21 +287,30 @@ def google_login(data: dict, response: Response, db: Session = Depends(get_db)):
         user = User(
             name=name,
             email=email,
-            password_hash=hash_password(secrets.token_hex(16))
+            password_hash=hash_password(secrets.token_hex(16)),
+            email_verified=True,          # ✅ Google vérifie déjà l'email
+            onboarding_completed=False,   # ✅ explicite pour éviter NULL
+            role="student",               # ✅ valeur par défaut explicite
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+    else:
+        # Utilisateur existant — s'assurer que email_verified est True
+        if not user.email_verified:
+            user.email_verified = True
+            db.commit()
+            db.refresh(user)
 
     token = create_access_token({"user_id": user.id}, False)
 
     response.set_cookie(
-    key="access_token",
-    value=token,
-    httponly=True,
-    samesite="none",  
-    secure=True,      
-    path="/"
+        key="access_token",
+        value=token,
+        httponly=True,
+        samesite="none",
+        secure=True,
+        path="/"
     )
 
     return {"message": "Google login success"}
